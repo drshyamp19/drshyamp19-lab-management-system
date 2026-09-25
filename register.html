@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register HOD - Lab Management System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+        <div class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-800">First Time Setup</h1>
+            <p class="text-gray-500 mt-2">Create the main HOD Admin account</p>
+        </div>
+
+        <form id="registerForm" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Full Name</label>
+                <input type="text" id="regName" required 
+                       class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500" 
+                       placeholder="e.g. Rahul Patil">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Email Address</label>
+                <input type="email" id="regEmail" required 
+                       class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500" 
+                       placeholder="hod@college.edu">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Create Password</label>
+                <input type="password" id="regPassword" required minlength="6"
+                       class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-green-500 focus:border-green-500" 
+                       placeholder="At least 6 characters">
+            </div>
+
+            <p id="regErrorMessage" class="text-red-500 text-sm hidden"></p>
+
+            <button type="submit" id="registerBtn" 
+                    class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200">
+                Create HOD Account
+            </button>
+        </form>
+    </div>
+
+    <!-- Firebase Logic -->
+    <script type="module" src="js/register.js"></script>
+</body>
+</html>

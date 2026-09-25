@@ -1,0 +1,71 @@
+rules_version = '2';
+
+// Firebase Console -> Firestore Database -> Rules -> इथला code paste करा -> Publish
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function myData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isHod() {
+      return isSignedIn() && myData().role == 'hod';
+    }
+
+    function isLabStaff(labId) {
+      return isSignedIn()
+        && (myData().role == 'incharge' || myData().role == 'assistant')
+        && myData().labId == labId;
+    }
+
+    function canAccessLab(labId) {
+      return isHod() || isLabStaff(labId);
+    }
+
+    // ===== USERS =====
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      // पहिला HOD account तयार करताना स्वतःची profile create करण्याची परवानगी,
+      // त्यानंतर फक्त HOD नवीन users तयार करू शकतो
+      allow create: if isHod() || request.auth.uid == userId;
+      allow update, delete: if isHod();
+    }
+
+    // ===== LABS =====
+    match /labs/{labId} {
+      allow read: if isSignedIn();
+      allow write: if isHod();
+    }
+
+    // ===== STUDENTS =====
+    match /students/{studentId} {
+      allow read: if isSignedIn() && canAccessLab(resource.data.labId);
+      allow create: if isSignedIn() && canAccessLab(request.resource.data.labId);
+      allow update: if isSignedIn() && canAccessLab(resource.data.labId)
+                    && canAccessLab(request.resource.data.labId);
+      allow delete: if isHod();
+    }
+
+    // ===== COMPONENTS =====
+    match /components/{componentId} {
+      allow read: if isSignedIn() && canAccessLab(resource.data.labId);
+      allow create: if isSignedIn() && canAccessLab(request.resource.data.labId);
+      allow update: if isSignedIn() && canAccessLab(resource.data.labId)
+                    && canAccessLab(request.resource.data.labId);
+      allow delete: if isHod();
+    }
+
+    // ===== TRANSACTIONS (audit trail - कधीही delete नाही) =====
+    match /transactions/{txId} {
+      allow read: if isSignedIn() && canAccessLab(resource.data.labId);
+      allow create: if isSignedIn() && canAccessLab(request.resource.data.labId);
+      // फक्त correction/reversal साठी update, तेही HOD कडून
+      allow update: if isHod();
+      allow delete: if false;
+    }
+  }
+}

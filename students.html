@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Students - Lab System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+</head>
+<body class="bg-gray-50 flex h-screen overflow-hidden text-gray-900">
+
+    <aside class="hidden md:flex flex-col w-64 bg-white border-r border-gray-200">
+        <div class="p-4 border-b">
+            <h2 class="text-xl font-bold text-gray-800">Lab System</h2>
+            <p class="text-sm text-gray-500" id="userRoleDisplay">Loading...</p>
+        </div>
+        <nav class="flex-1 p-4 space-y-2">
+            <a href="dashboard.html" class="block px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50">Dashboard</a>
+            <a href="components.html" class="block px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50">Components</a>
+            <a href="students.html" class="block px-4 py-2 rounded-lg bg-blue-50 text-blue-700 font-medium">Students</a>
+            <a href="transactions.html" class="block px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50">IN/OUT</a>
+            <a href="labs.html" id="navLabs" class="hidden block px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50">Labs</a>
+        </nav>
+        <div class="p-4 border-t">
+            <button id="logoutBtn" class="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg font-medium">Logout</button>
+        </div>
+    </aside>
+
+    <main class="flex-1 p-4 md:p-8 overflow-y-auto pb-24 md:pb-8">
+        <header class="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h1 class="text-2xl font-bold">Students</h1>
+                <p class="text-gray-500 text-sm">Student master, CSV import, आणि issued/pending returns.</p>
+            </div>
+            <div class="flex gap-2">
+                <label class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-lg cursor-pointer">
+                    Import CSV
+                    <input type="file" id="csvInput" accept=".csv" class="hidden">
+                </label>
+                <button id="showFormBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg">+ Add Student</button>
+            </div>
+        </header>
+        <p class="text-xs text-gray-400 mb-4">CSV columns: studentUid,name,rollNumber,course,year,semester,division,batch,academicYear,mobile</p>
+
+        <input id="searchBox" placeholder="Search by Name, UID or Roll No..." class="w-full mb-4 px-3 py-2 border border-gray-300 rounded-lg">
+
+        <div id="studentForm" class="hidden bg-white p-4 rounded-xl border border-gray-100 shadow-sm mb-6 space-y-3">
+            <input type="hidden" id="studentId">
+            <div class="grid md:grid-cols-3 gap-3">
+                <div><label class="block text-sm font-medium text-gray-700">Student UID</label><input id="studentUid" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"></div>
+                <div><label class="block text-sm font-medium text-gray-700">Name</label><input id="studentName" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"></div>
+                <div><label class="block text-sm font-medium text-gray-700">Roll Number</label><input id="studentRoll" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"></div>
+            </div>
+            <div class="grid md:grid-cols-4 gap-3">
+                <div><label class="block text-sm font-medium text-gray-700">Course</label><input id="studentCourse" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"></div>
+                <div><label class="block text-sm font-medium text-gray-700">Year</label><input id="studentYear" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"></div>
+                <div><label class="block text-sm font-medium text-gray-700">Semester</label><input id="studentSem" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"></div>
+                <div><label class="block text-sm font-medium text-gray-700">Division</label><input id="studentDivision" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"></div>
+            </div>
+            <div class="grid md:grid-cols-4 gap-3">
+                <div><label class="block text-sm font-medium text-gray-700">Batch</label><input id="studentBatch" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"></div>
+                <div><label class="block text-sm font-medium text-gray-700">Academic Year</label><input id="studentAcadYear" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"></div>
+                <div><label class="block text-sm font-medium text-gray-700">Mobile (optional)</label><input id="studentMobile" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"></div>
+                <div><label class="block text-sm font-medium text-gray-700">Status</label>
+                    <select id="studentStatus" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg">
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
+            </div>
+            <div id="studentLabWrap" class="hidden">
+                <label class="block text-sm font-medium text-gray-700">Lab</label>
+                <select id="studentLab" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg"></select>
+            </div>
+            <p id="studentError" class="text-red-500 text-sm hidden"></p>
+            <div class="flex gap-2">
+                <button id="saveStudentBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg">Save</button>
+                <button id="cancelStudentBtn" class="px-4 py-2 rounded-lg border border-gray-300">Cancel</button>
+            </div>
+        </div>
+
+        <div id="profilePanel" class="hidden bg-white p-4 rounded-xl border border-gray-100 shadow-sm mb-6">
+            <div class="flex justify-between items-start mb-3">
+                <div>
+                    <h3 class="font-bold text-lg" id="profileName"></h3>
+                    <p class="text-sm text-gray-500" id="profileUid"></p>
+                </div>
+                <button id="closeProfileBtn" class="text-gray-400 hover:text-gray-600">✕</button>
+            </div>
+            <p class="text-sm mb-2"><span class="font-medium">Pending Returns:</span> <span id="profilePending">0</span></p>
+            <h4 class="text-sm font-semibold text-gray-700 mt-3 mb-1">Currently Issued</h4>
+            <ul id="profileIssuedList" class="text-sm space-y-1 mb-3"></ul>
+            <h4 class="text-sm font-semibold text-gray-700 mt-3 mb-1">Transaction History</h4>
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs">
+                    <thead class="text-gray-400 text-left"><tr><th class="p-1">Date</th><th class="p-1">Type</th><th class="p-1">Component</th><th class="p-1">Qty</th></tr></thead>
+                    <tbody id="profileHistoryBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl border border-gray-100 shadow-sm overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 text-gray-500 text-left">
+                    <tr><th class="p-3">Name</th><th class="p-3">UID</th><th class="p-3">Roll No</th><th class="p-3">Status</th><th class="p-3">Action</th></tr>
+                </thead>
+                <tbody id="studentsTableBody"></tbody>
+            </table>
+        </div>
+    </main>
+
+    <nav class="md:hidden fixed bottom-0 w-full bg-white border-t border-gray-200 flex justify-around items-center h-16 z-50">
+        <a href="dashboard.html" class="flex flex-col items-center text-gray-500 text-xs">Home</a>
+        <a href="components.html" class="flex flex-col items-center text-gray-500 text-xs">Stock</a>
+        <a href="transactions.html" class="flex flex-col items-center text-gray-500 text-xs">IN/OUT</a>
+        <a href="students.html" class="flex flex-col items-center text-blue-600 text-xs">Students</a>
+    </nav>
+
+    <script type="module" src="js/students.js"></script>
+</body>
+</html>
