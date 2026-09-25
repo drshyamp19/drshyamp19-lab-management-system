@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Lab System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 flex h-screen overflow-hidden text-gray-900">
+
+    <!-- Desktop Sidebar -->
+    <aside class="hidden md:flex flex-col w-64 bg-white border-r border-gray-200">
+        <div class="p-4 border-b">
+            <h2 class="text-xl font-bold text-gray-800">Lab System</h2>
+            <p class="text-sm text-gray-500" id="userRoleDisplay">Loading...</p>
+        </div>
+        <nav class="flex-1 p-4 space-y-2">
+            <a href="dashboard.html" class="block px-4 py-2 rounded-lg bg-blue-50 text-blue-700 font-medium">Dashboard</a>
+            <a href="components.html" class="block px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50">Components</a>
+            <a href="students.html" class="block px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50">Students</a>
+            <a href="transactions.html" class="block px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50">IN/OUT</a>
+        </nav>
+        <div class="p-4 border-t">
+            <button id="logoutBtn" class="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg font-medium">Logout</button>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-4 md:p-8 overflow-y-auto">
+        <header class="mb-8">
+            <h1 class="text-2xl font-bold text-gray-900">Welcome, <span id="userNameDisplay">...</span></h1>
+            <p class="text-gray-500">Here is your quick overview.</p>
+        </header>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="text-gray-500 text-sm">Total Components</h3>
+                <p class="text-2xl font-bold text-gray-800 mt-2" id="statTotal">0</p>
+            </div>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                <h3 class="text-gray-500 text-sm">Issued Items</h3>
+                <p class="text-2xl font-bold text-blue-600 mt-2" id="statIssued">0</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Mobile Bottom Nav -->
+    <nav class="md:hidden fixed bottom-0 w-full bg-white border-t border-gray-200 flex justify-around items-center h-16 z-50">
+        <a href="dashboard.html" class="flex flex-col items-center text-blue-600">Home</a>
+        <a href="components.html" class="flex flex-col items-center text-gray-500">Stock</a>
+        <a href="transactions.html" class="flex flex-col items-center text-gray-500">IN/OUT</a>
+        <a href="students.html" class="flex flex-col items-center text-gray-500">Students</a>
+    </nav>
+
+    <!-- Dashboard Logic -->
+    <script type="module" src="js/dashboard.js"></script>
+</body>
+</html>
