@@ -187,6 +187,15 @@ document.getElementById("btnAllGood")?.addEventListener("click", () => {
     }
 });
 
+['returnGoodQty', 'returnDamagedQty'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', () => {
+        const issuedQty = Number(document.getElementById("inIssuedQty").value) || 0;
+        const good = Number(document.getElementById("returnGoodQty").value) || 0;
+        const damaged = Number(document.getElementById("returnDamagedQty").value) || 0;
+        document.getElementById("returnMissingQty").value = Math.max(0, issuedQty - (good + damaged));
+    });
+});
+
 document.getElementById("returnForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const btn = e.target.querySelector("button");
@@ -206,9 +215,10 @@ document.getElementById("returnForm").addEventListener("submit", async (e) => {
     const goodQty = Number(document.getElementById("returnGoodQty").value) || 0;
     const damagedQty = Number(document.getElementById("returnDamagedQty").value) || 0;
     const missingQty = Number(document.getElementById("returnMissingQty").value) || 0;
+    const totalReturned = goodQty + damagedQty + missingQty;
     
-    if (goodQty + damagedQty + missingQty !== issuedQty) {
-        alert(`Total return quantity (${goodQty + damagedQty + missingQty}) must equal issued quantity (${issuedQty}).`);
+    if (totalReturned > issuedQty || totalReturned === 0) {
+        alert(`Total return quantity (${totalReturned}) must be between 1 and ${issuedQty}.`);
         btn.innerText = "Confirm IN";
         return;
     }
@@ -220,12 +230,27 @@ document.getElementById("returnForm").addEventListener("submit", async (e) => {
 
         const batch = writeBatch(db);
 
-        // 1. Mark original as Returned and store details
-        batch.update(doc(db, "transactions", txId), { 
-            status: "Returned",
-            handledBy: staffName,
-            returnDetails: { good: goodQty, damaged: damagedQty, missing: missingQty }
-        });
+        if (totalReturned === issuedQty) {
+            // 1. Mark original as Returned and store details
+            batch.update(doc(db, "transactions", txId), { 
+                status: "Returned",
+                handledBy: staffName,
+                returnDetails: { good: goodQty, damaged: damagedQty, missing: missingQty }
+            });
+        } else {
+            // Partial Return
+            batch.update(doc(db, "transactions", txId), {
+                quantity: issuedQty - totalReturned
+            });
+            const newTxRef = doc(collection(db, "transactions"));
+            batch.set(newTxRef, {
+                ...originalTx,
+                quantity: totalReturned,
+                status: "Returned",
+                handledBy: staffName,
+                returnDetails: { good: goodQty, damaged: damagedQty, missing: missingQty }
+            });
+        }
 
         // 2. Update Component Stock
         const comp = componentsData.find(c => c.id === originalTx.componentId);

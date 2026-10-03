@@ -66,7 +66,7 @@ function renderStudents(list) {
         tr.className = "border-b border-gray-100 hover:bg-gray-50 transition";
         tr.innerHTML = `
             <td class="p-4 text-gray-800 font-medium">${st.uid}</td>
-            <td class="p-4 text-gray-600">${st.name}</td>
+            <td class="p-4 text-gray-600 cursor-pointer hover:underline text-blue-600" onclick="openStudentHistory('${st.uid}', '${st.name.replace(/'/g, "\\'")}')">${st.name}</td>
             <td class="p-4 text-gray-600">${st.course}</td>
             <td class="p-4 text-right">
                 <button onclick="openIssueModal('${st.uid}', '${st.name.replace(/'/g, "\\'")}')" class="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-1 rounded-md text-xs font-bold transition mr-1">Issue Item</button>
@@ -237,6 +237,15 @@ document.getElementById("btnAllGood")?.addEventListener("click", () => {
     }
 });
 
+['returnGoodQty', 'returnDamagedQty'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', () => {
+        const issuedQty = Number(document.getElementById("inIssuedQty").value) || 0;
+        const good = Number(document.getElementById("returnGoodQty").value) || 0;
+        const damaged = Number(document.getElementById("returnDamagedQty").value) || 0;
+        document.getElementById("returnMissingQty").value = Math.max(0, issuedQty - (good + damaged));
+    });
+});
+
 returnCompForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const studentUid = document.getElementById("returnStudentUid").value;
@@ -250,9 +259,10 @@ returnCompForm.addEventListener("submit", async (e) => {
     const goodQty = Number(document.getElementById("returnGoodQty").value) || 0;
     const damagedQty = Number(document.getElementById("returnDamagedQty").value) || 0;
     const missingQty = Number(document.getElementById("returnMissingQty").value) || 0;
+    const totalReturned = goodQty + damagedQty + missingQty;
     
-    if (goodQty + damagedQty + missingQty !== issuedQty) {
-        alert(`Total return quantity (${goodQty + damagedQty + missingQty}) must equal issued quantity (${issuedQty}).`);
+    if (totalReturned > issuedQty || totalReturned === 0) {
+        alert(`Total return quantity (${totalReturned}) must be between 1 and ${issuedQty}.`);
         return;
     }
     
@@ -261,16 +271,36 @@ returnCompForm.addEventListener("submit", async (e) => {
     btn.disabled = true;
 
     try {
+        const txDoc = await getDoc(doc(db, "transactions", txId)); 
+        if(!txDoc.exists()) throw new Error("Transaction not found");
+        const originalTx = txDoc.data();
+
         const batch = writeBatch(db);
         
-        // 1. Update Transaction
-        const txRef = doc(db, "transactions", txId);
-        batch.update(txRef, {
-            status: "Returned",
-            handledBy: staffName,
-            returnDate: serverTimestamp(),
-            returnDetails: { good: goodQty, damaged: damagedQty, missing: missingQty }
-        });
+        if (totalReturned === issuedQty) {
+            // 1. Update Transaction
+            const txRef = doc(db, "transactions", txId);
+            batch.update(txRef, {
+                status: "Returned",
+                handledBy: staffName,
+                returnDate: serverTimestamp(),
+                returnDetails: { good: goodQty, damaged: damagedQty, missing: missingQty }
+            });
+        } else {
+            // Partial Return
+            batch.update(doc(db, "transactions", txId), {
+                quantity: issuedQty - totalReturned
+            });
+            const newTxRef = doc(collection(db, "transactions"));
+            batch.set(newTxRef, {
+                ...originalTx,
+                quantity: totalReturned,
+                status: "Returned",
+                handledBy: staffName,
+                returnDate: serverTimestamp(),
+                returnDetails: { good: goodQty, damaged: damagedQty, missing: missingQty }
+            });
+        }
 
         // 2. Update Component Stock
         const compRef = doc(db, "components", compId);
@@ -375,4 +405,50 @@ csvFileInput.addEventListener("change", (e) => {
         }
     };
     reader.readAsText(file);
+});
+
+// Student History Logic
+const studentHistoryModal = document.getElementById("studentHistoryModal");
+const closeStudentHistoryBtn = document.getElementById("closeStudentHistoryBtn");
+const studentHistoryTableBody = document.getElementById("studentHistoryTableBody");
+
+window.openStudentHistory = async function(uid, name) {
+    document.getElementById("historyStudentName").innerText = name;
+    studentHistoryModal.classList.remove("hidden");
+    studentHistoryTableBody.innerHTML = `<tr><td colspan="4" class="p-3 text-center text-gray-500">Loading history...</td></tr>`;
+
+    try {
+        const q = query(collection(db, "transactions"), where("studentUid", "==", uid));
+        const snapshot = await getDocs(q);
+        
+        let txs = [];
+        snapshot.forEach(doc => txs.push({id: doc.id, ...doc.data()}));
+        txs.sort((a, b) => b.date?.toMillis() - a.date?.toMillis());
+        
+        if(txs.length === 0) {
+            studentHistoryTableBody.innerHTML = `<tr><td colspan="4" class="p-3 text-center text-gray-500">No history found.</td></tr>`;
+            return;
+        }
+
+        studentHistoryTableBody.innerHTML = "";
+        txs.forEach(tx => {
+            const dateStr = tx.date ? new Date(tx.date.toDate()).toLocaleDateString() : (tx.dateTime ? new Date(tx.dateTime.toDate()).toLocaleDateString() : 'N/A');
+            const statusClass = tx.status === "Returned" ? "text-green-600" : (tx.status === "Consumed" ? "text-red-600" : "text-orange-600");
+            studentHistoryTableBody.innerHTML += `
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="p-3 text-sm text-gray-600">${dateStr}</td>
+                    <td class="p-3 text-sm text-gray-800 font-medium">${tx.componentName}</td>
+                    <td class="p-3 text-sm text-gray-600">${tx.quantity}</td>
+                    <td class="p-3 text-sm font-semibold ${statusClass}">${tx.status}</td>
+                </tr>
+            `;
+        });
+    } catch(e) {
+        console.error("Error loading history:", e);
+        studentHistoryTableBody.innerHTML = `<tr><td colspan="4" class="p-3 text-center text-red-500">Error loading history</td></tr>`;
+    }
+}
+
+closeStudentHistoryBtn?.addEventListener("click", () => {
+    studentHistoryModal.classList.add("hidden");
 });

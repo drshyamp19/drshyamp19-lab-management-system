@@ -71,7 +71,7 @@ function renderComponents(compList) {
         card.innerHTML = `
             <div>
                 <div class="flex justify-between items-start mb-2">
-                    <h3 class="font-bold text-lg text-gray-900">${comp.name}</h3>
+                    <h3 class="font-bold text-lg text-gray-900 cursor-pointer hover:underline text-blue-600" onclick="openCompHistory('${comp.id}', '${comp.name.replace(/'/g, "\\'")}')">${comp.name}</h3>
                     <span class="text-xs px-2 py-1 rounded-full font-semibold ${badgeColor}">${catText}</span>
                 </div>
                 <div class="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-2 text-center">
@@ -262,6 +262,15 @@ document.getElementById("btnAllGood")?.addEventListener("click", () => {
     }
 });
 
+['returnGoodQty', 'returnDamagedQty'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', () => {
+        const issuedQty = Number(document.getElementById("inIssuedQty").value) || 0;
+        const good = Number(document.getElementById("returnGoodQty").value) || 0;
+        const damaged = Number(document.getElementById("returnDamagedQty").value) || 0;
+        document.getElementById("returnMissingQty").value = Math.max(0, issuedQty - (good + damaged));
+    });
+});
+
 returnCompForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const compId = document.getElementById("returnCompId").value;
@@ -275,9 +284,10 @@ returnCompForm.addEventListener("submit", async (e) => {
     const goodQty = Number(document.getElementById("returnGoodQty").value) || 0;
     const damagedQty = Number(document.getElementById("returnDamagedQty").value) || 0;
     const missingQty = Number(document.getElementById("returnMissingQty").value) || 0;
+    const totalReturned = goodQty + damagedQty + missingQty;
     
-    if (goodQty + damagedQty + missingQty !== issuedQty) {
-        alert(`Total return quantity (${goodQty + damagedQty + missingQty}) must equal issued quantity (${issuedQty}).`);
+    if (totalReturned > issuedQty || totalReturned === 0) {
+        alert(`Total return quantity (${totalReturned}) must be between 1 and ${issuedQty}.`);
         return;
     }
     
@@ -286,16 +296,36 @@ returnCompForm.addEventListener("submit", async (e) => {
     btn.disabled = true;
 
     try {
+        const txDoc = await getDoc(doc(db, "transactions", txId)); 
+        if(!txDoc.exists()) throw new Error("Transaction not found");
+        const originalTx = txDoc.data();
+
         const batch = writeBatch(db);
         
-        // 1. Update Transaction
-        const txRef = doc(db, "transactions", txId);
-        batch.update(txRef, {
-            status: "Returned",
-            handledBy: staffName,
-            returnDate: serverTimestamp(),
-            returnDetails: { good: goodQty, damaged: damagedQty, missing: missingQty }
-        });
+        if (totalReturned === issuedQty) {
+            // 1. Update Transaction
+            const txRef = doc(db, "transactions", txId);
+            batch.update(txRef, {
+                status: "Returned",
+                handledBy: staffName,
+                returnDate: serverTimestamp(),
+                returnDetails: { good: goodQty, damaged: damagedQty, missing: missingQty }
+            });
+        } else {
+            // Partial Return
+            batch.update(doc(db, "transactions", txId), {
+                quantity: issuedQty - totalReturned
+            });
+            const newTxRef = doc(collection(db, "transactions"));
+            batch.set(newTxRef, {
+                ...originalTx,
+                quantity: totalReturned,
+                status: "Returned",
+                handledBy: staffName,
+                returnDate: serverTimestamp(),
+                returnDetails: { good: goodQty, damaged: damagedQty, missing: missingQty }
+            });
+        }
 
         // 2. Update Component Stock
         const compRef = doc(db, "components", compId);
@@ -404,4 +434,50 @@ csvFileInput.addEventListener("change", (e) => {
         }
     };
     reader.readAsText(file);
+});
+
+// Component History Logic
+const compHistoryModal = document.getElementById("compHistoryModal");
+const closeCompHistoryBtn = document.getElementById("closeCompHistoryBtn");
+const compHistoryTableBody = document.getElementById("compHistoryTableBody");
+
+window.openCompHistory = async function(compId, compName) {
+    document.getElementById("historyCompName").innerText = compName;
+    compHistoryModal.classList.remove("hidden");
+    compHistoryTableBody.innerHTML = `<tr><td colspan="4" class="p-3 text-center text-gray-500">Loading history...</td></tr>`;
+
+    try {
+        const q = query(collection(db, "transactions"), where("componentId", "==", compId));
+        const snapshot = await getDocs(q);
+        
+        let txs = [];
+        snapshot.forEach(doc => txs.push({id: doc.id, ...doc.data()}));
+        txs.sort((a, b) => b.date?.toMillis() - a.date?.toMillis());
+        
+        if(txs.length === 0) {
+            compHistoryTableBody.innerHTML = `<tr><td colspan="4" class="p-3 text-center text-gray-500">No history found.</td></tr>`;
+            return;
+        }
+
+        compHistoryTableBody.innerHTML = "";
+        txs.forEach(tx => {
+            const dateStr = tx.date ? new Date(tx.date.toDate()).toLocaleDateString() : (tx.dateTime ? new Date(tx.dateTime.toDate()).toLocaleDateString() : 'N/A');
+            const statusClass = tx.status === "Returned" ? "text-green-600" : (tx.status === "Consumed" ? "text-red-600" : "text-orange-600");
+            compHistoryTableBody.innerHTML += `
+                <tr class="border-b border-gray-100 hover:bg-gray-50">
+                    <td class="p-3 text-sm text-gray-600">${dateStr}</td>
+                    <td class="p-3 text-sm text-gray-800 font-medium">${tx.studentName}</td>
+                    <td class="p-3 text-sm text-gray-600">${tx.quantity}</td>
+                    <td class="p-3 text-sm font-semibold ${statusClass}">${tx.status}</td>
+                </tr>
+            `;
+        });
+    } catch(e) {
+        console.error("Error loading history:", e);
+        compHistoryTableBody.innerHTML = `<tr><td colspan="4" class="p-3 text-center text-red-500">Error loading history</td></tr>`;
+    }
+}
+
+closeCompHistoryBtn?.addEventListener("click", () => {
+    compHistoryModal.classList.add("hidden");
 });
