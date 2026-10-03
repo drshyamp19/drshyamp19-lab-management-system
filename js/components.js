@@ -8,6 +8,10 @@ const showAddModalBtn = document.getElementById("showAddModalBtn");
 const closeModalBtn = document.getElementById("closeModalBtn");
 const addCompForm = document.getElementById("addCompForm");
 
+const downloadSampleBtn = document.getElementById("downloadSampleBtn");
+const uploadCsvBtn = document.getElementById("uploadCsvBtn");
+const csvFileInput = document.getElementById("csvFileInput");
+
 onAuthStateChanged(auth, (user) => {
     if (!user) window.location.href = "index.html";
     else loadComponents();
@@ -55,6 +59,7 @@ async function loadComponents() {
     }
 }
 
+// Single Add Component
 showAddModalBtn.addEventListener("click", () => addCompModal.classList.remove("hidden"));
 closeModalBtn.addEventListener("click", () => addCompModal.classList.add("hidden"));
 
@@ -69,7 +74,7 @@ addCompForm.addEventListener("submit", async (e) => {
             name: document.getElementById("compName").value,
             category: document.getElementById("compCategory").value,
             totalQty: qty,
-            availableQty: qty, // सुरुवातीला availableQty = totalQty
+            availableQty: qty,
             createdAt: new Date()
         });
         
@@ -82,4 +87,66 @@ addCompForm.addEventListener("submit", async (e) => {
         alert("Failed to add component.");
         btn.innerText = "Save Item";
     }
+});
+
+// CSV Download Sample
+downloadSampleBtn.addEventListener("click", () => {
+    // Note: Category must be exactly CONSUMABLE or NON_CONSUMABLE for the logic to work later
+    const csvContent = "Name,Category,TotalQuantity\nMultimeter,NON_CONSUMABLE,10\nResistors,CONSUMABLE,500";
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Component_Sample.csv';
+    a.click();
+});
+
+// CSV Upload
+uploadCsvBtn.addEventListener("click", () => csvFileInput.click());
+
+csvFileInput.addEventListener("change", (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+        const text = event.target.result;
+        // Split text by new lines, remove empty lines
+        const rows = text.split("\n").filter(row => row.trim().length > 0).slice(1); 
+        
+        if (rows.length === 0) return alert("File is empty or invalid format.");
+        
+        uploadCsvBtn.innerText = "Uploading...";
+        let count = 0;
+        
+        try {
+            for (let row of rows) {
+                const cols = row.split(",");
+                if (cols.length >= 3) {
+                    const qty = Number(cols[2].trim());
+                    // Fallback to NON_CONSUMABLE if user typed wrong
+                    let category = cols[1].trim().toUpperCase();
+                    if(category !== "CONSUMABLE" && category !== "NON_CONSUMABLE") category = "NON_CONSUMABLE";
+
+                    await addDoc(collection(db, "components"), {
+                        name: cols[0].trim(),
+                        category: category,
+                        totalQty: qty,
+                        availableQty: qty,
+                        createdAt: new Date()
+                    });
+                    count++;
+                }
+            }
+            alert(`${count} Components uploaded successfully!`);
+            csvFileInput.value = ""; // reset input
+            uploadCsvBtn.innerText = "↑ Upload CSV";
+            loadComponents();
+        } catch (error) {
+            console.error(error);
+            alert("Error uploading data.");
+            uploadCsvBtn.innerText = "↑ Upload CSV";
+        }
+    };
+    reader.readAsText(file);
 });

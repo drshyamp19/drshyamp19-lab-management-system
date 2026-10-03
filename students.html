@@ -18,16 +18,26 @@
             <a href="components.html" class="block px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50">Components</a>
             <a href="students.html" class="block px-4 py-2 rounded-lg bg-blue-50 text-blue-700 font-medium">Students</a>
             <a href="transactions.html" class="block px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50">IN/OUT</a>
+            <a href="reports.html" class="block px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50">Reports</a>
         </nav>
     </aside>
 
     <!-- Main Content -->
     <main class="flex-1 p-4 md:p-8 overflow-y-auto">
-        <div class="flex justify-between items-center mb-6">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
             <h1 class="text-2xl font-bold text-gray-900">Student Master</h1>
-            <button id="showAddModalBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                + Add Student
-            </button>
+            <div class="flex flex-wrap gap-2">
+                <button id="downloadSampleBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg text-sm font-medium">
+                    ↓ Sample CSV
+                </button>
+                <input type="file" id="csvFileInput" accept=".csv" class="hidden">
+                <button id="uploadCsvBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                    ↑ Upload CSV
+                </button>
+                <button id="showAddModalBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                    + Add Student
+                </button>
+            </div>
         </div>
 
         <!-- Students Table -->
