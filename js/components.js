@@ -1,5 +1,5 @@
 import { db, auth } from "./firebase-init.js";
-import { collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { collection, getDocs, addDoc, writeBatch, doc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const componentsGrid = document.getElementById("componentsGrid");
@@ -11,6 +11,16 @@ const addCompForm = document.getElementById("addCompForm");
 const downloadSampleBtn = document.getElementById("downloadSampleBtn");
 const uploadCsvBtn = document.getElementById("uploadCsvBtn");
 const csvFileInput = document.getElementById("csvFileInput");
+const searchInput = document.getElementById("searchInput");
+
+// Issue Modal Elements
+const issueCompModal = document.getElementById("issueCompModal");
+const closeIssueModalBtn = document.getElementById("closeIssueModalBtn");
+const directIssueForm = document.getElementById("directIssueForm");
+const issueStudentSelect = document.getElementById("issueStudentSelect");
+
+let allComponents = [];
+let tomSelectInstance = null;
 
 onAuthStateChanged(auth, (user) => {
     if (!user) window.location.href = "index.html";
@@ -20,22 +30,34 @@ onAuthStateChanged(auth, (user) => {
 async function loadComponents() {
     try {
         const querySnapshot = await getDocs(collection(db, "components"));
-        componentsGrid.innerHTML = "";
-        
-        if (querySnapshot.empty) {
-            componentsGrid.innerHTML = `<p class="col-span-full text-center text-gray-500">No components found. Add some!</p>`;
-            return;
-        }
-
+        allComponents = [];
         querySnapshot.forEach((doc) => {
-            const comp = doc.data();
-            const card = document.createElement("div");
-            card.className = "bg-white p-5 rounded-xl shadow-sm border border-gray-200";
-            
-            const badgeColor = comp.category === "CONSUMABLE" ? "bg-orange-100 text-orange-800" : "bg-purple-100 text-purple-800";
-            const catText = comp.category === "CONSUMABLE" ? "Consumable" : "Non-Consumable";
+            allComponents.push({ id: doc.id, ...doc.data() });
+        });
+        renderComponents(allComponents);
+    } catch (error) {
+        console.error("Error loading components:", error);
+        componentsGrid.innerHTML = `<p class="text-red-500">Error loading data.</p>`;
+    }
+}
 
-            card.innerHTML = `
+function renderComponents(compList) {
+    componentsGrid.innerHTML = "";
+    
+    if (compList.length === 0) {
+        componentsGrid.innerHTML = `<p class="col-span-full text-center text-gray-500">No components found.</p>`;
+        return;
+    }
+
+    compList.forEach((comp) => {
+        const card = document.createElement("div");
+        card.className = "bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex flex-col justify-between";
+        
+        const badgeColor = comp.category === "CONSUMABLE" ? "bg-orange-100 text-orange-800" : "bg-purple-100 text-purple-800";
+        const catText = comp.category === "CONSUMABLE" ? "Consumable" : "Non-Consumable";
+
+        card.innerHTML = `
+            <div>
                 <div class="flex justify-between items-start mb-2">
                     <h3 class="font-bold text-lg text-gray-900">${comp.name}</h3>
                     <span class="text-xs px-2 py-1 rounded-full font-semibold ${badgeColor}">${catText}</span>
@@ -50,16 +72,120 @@ async function loadComponents() {
                         <p class="font-bold text-green-800">${comp.availableQty}</p>
                     </div>
                 </div>
-            `;
-            componentsGrid.appendChild(card);
-        });
-    } catch (error) {
-        console.error("Error loading components:", error);
-        componentsGrid.innerHTML = `<p class="text-red-500">Error loading data.</p>`;
-    }
+            </div>
+            <button onclick="openIssueModal('${comp.id}', '${comp.name}', '${comp.category}', ${comp.availableQty})" class="mt-4 w-full bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white font-bold py-2 rounded-lg transition duration-200 text-sm">Issue Item</button>
+        `;
+        componentsGrid.appendChild(card);
+    });
 }
 
-// Single Add Component
+// Search Feature
+if(searchInput) {
+    searchInput.addEventListener("input", (e) => {
+        const term = e.target.value.toLowerCase();
+        const filtered = allComponents.filter(c => c.name.toLowerCase().includes(term) || c.category.toLowerCase().includes(term));
+        renderComponents(filtered);
+    });
+}
+
+// Global function to open Issue Modal from HTML onclick
+window.openIssueModal = async function(id, name, category, availQty) {
+    if(availQty <= 0) {
+        alert("This item is out of stock!");
+        return;
+    }
+    document.getElementById("issueCompId").value = id;
+    document.getElementById("issueCompName").innerText = name;
+    document.getElementById("issueCompCategory").value = category;
+    document.getElementById("issueCompAvail").value = availQty;
+    document.getElementById("issueQty").max = availQty;
+    
+    issueCompModal.classList.remove("hidden");
+
+    // Load Students into Select
+    try {
+        const stSnap = await getDocs(collection(db, "students"));
+        issueStudentSelect.innerHTML = `<option value="">Select a Student...</option>`;
+        stSnap.forEach(doc => {
+            const st = doc.data();
+            issueStudentSelect.innerHTML += `<option value="${st.uid}|${st.name}">${st.uid} - ${st.name}</option>`;
+        });
+        
+        // Initialize TomSelect if not already initialized
+        if(tomSelectInstance) {
+            tomSelectInstance.destroy();
+        }
+        tomSelectInstance = new TomSelect("#issueStudentSelect", { create: false, sortField: { field: "text", direction: "asc" }});
+    } catch(e) {
+        console.error("Error loading students:", e);
+    }
+};
+
+closeIssueModalBtn.addEventListener("click", () => {
+    issueCompModal.classList.add("hidden");
+    directIssueForm.reset();
+});
+
+// Handle Direct Issue Submit
+directIssueForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const compId = document.getElementById("issueCompId").value;
+    const compName = document.getElementById("issueCompName").innerText;
+    const compCategory = document.getElementById("issueCompCategory").value;
+    const availQty = Number(document.getElementById("issueCompAvail").value);
+    
+    const studentVal = issueStudentSelect.value;
+    const qty = Number(document.getElementById("issueQty").value);
+    const purpose = document.getElementById("issuePurpose").value;
+
+    if(!studentVal) return alert("Please select a student.");
+    if(qty > availQty) return alert("Quantity exceeds available stock!");
+
+    const [studentUid, studentName] = studentVal.split("|");
+    const btn = directIssueForm.querySelector("button[type=submit]");
+    btn.innerText = "Processing...";
+    btn.disabled = true;
+
+    try {
+        const batch = writeBatch(db);
+        
+        // 1. Add Transaction
+        const newTxRef = doc(collection(db, "transactions"));
+        const newStatus = compCategory === "CONSUMABLE" ? "Consumed" : "Issued";
+        batch.set(newTxRef, {
+            type: "OUT",
+            componentId: compId,
+            componentName: compName,
+            studentUid: studentUid,
+            studentName: studentName,
+            quantity: qty,
+            purpose: purpose,
+            status: newStatus,
+            date: serverTimestamp()
+        });
+
+        // 2. Update Component Stock
+        const compRef = doc(db, "components", compId);
+        batch.update(compRef, {
+            availableQty: availQty - qty
+        });
+
+        await batch.commit();
+        alert("Component issued successfully!");
+        issueCompModal.classList.add("hidden");
+        directIssueForm.reset();
+        loadComponents(); // Refresh Grid
+    } catch (error) {
+        console.error("Error issuing:", error);
+        alert("Failed to issue component.");
+    } finally {
+        btn.innerText = "Confirm Issue";
+        btn.disabled = false;
+    }
+});
+
+
+// Add Component Logic
 showAddModalBtn.addEventListener("click", () => addCompModal.classList.remove("hidden"));
 closeModalBtn.addEventListener("click", () => addCompModal.classList.add("hidden"));
 
@@ -91,7 +217,6 @@ addCompForm.addEventListener("submit", async (e) => {
 
 // CSV Download Sample
 downloadSampleBtn.addEventListener("click", () => {
-    // Note: Category must be exactly CONSUMABLE or NON_CONSUMABLE for the logic to work later
     const csvContent = "Name,Category,TotalQuantity\nMultimeter,NON_CONSUMABLE,10\nResistors,CONSUMABLE,500";
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -111,9 +236,7 @@ csvFileInput.addEventListener("change", (e) => {
     const reader = new FileReader();
     reader.onload = async (event) => {
         const text = event.target.result;
-        // Split text by new lines, remove empty lines
         const rows = text.split("\n").filter(row => row.trim().length > 0).slice(1); 
-        
         if (rows.length === 0) return alert("File is empty or invalid format.");
         
         uploadCsvBtn.innerText = "Uploading...";
@@ -124,7 +247,6 @@ csvFileInput.addEventListener("change", (e) => {
                 const cols = row.split(",");
                 if (cols.length >= 3) {
                     const qty = Number(cols[2].trim());
-                    // Fallback to NON_CONSUMABLE if user typed wrong
                     let category = cols[1].trim().toUpperCase();
                     if(category !== "CONSUMABLE" && category !== "NON_CONSUMABLE") category = "NON_CONSUMABLE";
 
@@ -139,13 +261,13 @@ csvFileInput.addEventListener("change", (e) => {
                 }
             }
             alert(`${count} Components uploaded successfully!`);
-            csvFileInput.value = ""; // reset input
-            uploadCsvBtn.innerText = "↑ Upload CSV";
+            csvFileInput.value = ""; 
+            uploadCsvBtn.innerText = "⬆ Upload CSV";
             loadComponents();
         } catch (error) {
             console.error(error);
             alert("Error uploading data.");
-            uploadCsvBtn.innerText = "↑ Upload CSV";
+            uploadCsvBtn.innerText = "⬆ Upload CSV";
         }
     };
     reader.readAsText(file);

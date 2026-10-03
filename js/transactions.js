@@ -64,13 +64,15 @@ async function loadDropdowns() {
             }
         });
 
-        // Load Active Issues for Return
-        const txQuery = query(collection(db, "transactions"), where("type", "==", "OUT"), where("status", "==", "Issued"));
+        // Load Active Issues for Return (Fixed Index Issue)
+        const txQuery = query(collection(db, "transactions"), where("type", "==", "OUT"));
         const txSnap = await getDocs(txQuery);
         inTransaction.innerHTML = `<option value="">-- Select Issue to Return --</option>`;
         txSnap.forEach(doc => {
             const tx = doc.data();
-            inTransaction.innerHTML += `<option value="${doc.id}">${tx.studentName} - ${tx.componentName} (Qty: ${tx.quantity})</option>`;
+            if(tx.status === "Issued") {
+                inTransaction.innerHTML += `<option value="${doc.id}">${tx.studentName} - ${tx.componentName} (Qty: ${tx.quantity})</option>`;
+            }
         });
 
         // Initialize TomSelect for Searchable Dropdowns
