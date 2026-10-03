@@ -13,10 +13,17 @@ onAuthStateChanged(auth, async (user) => {
     }
 
     try {
-        // Firestore मधून युझरचा रोल (Role) आणि नाव मिळवा
         const userDoc = await getDoc(doc(db, "users", user.uid));
         if (userDoc.exists()) {
             const userData = userDoc.data();
+            
+            // Block deleted users
+            if(userData.status === "Inactive") {
+                alert("Your account has been deleted or blocked by the Admin.");
+                signOut(auth);
+                return;
+            }
+
             userNameDisplay.innerText = userData.name;
             userRoleDisplay.innerText = userData.role;
         } else {
