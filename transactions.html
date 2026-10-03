@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IN/OUT - Lab System</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Tom Select (For Searchable Dropdowns) -->
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
 </head>
 <body class="bg-gray-50 flex h-screen overflow-hidden text-gray-900">
 
@@ -33,24 +37,24 @@
         <div id="formOut" class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 max-w-2xl">
             <form id="issueForm" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium">Select Student</label>
-                    <select id="outStudent" required class="mt-1 w-full border rounded-lg p-3"></select>
+                    <label class="block text-sm font-medium mb-1">Select Student (Type to search)</label>
+                    <select id="outStudent" required class="w-full" placeholder="Search Student..."></select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium">Select Component</label>
-                    <select id="outComponent" required class="mt-1 w-full border rounded-lg p-3"></select>
+                    <label class="block text-sm font-medium mb-1">Select Component (Type to search)</label>
+                    <select id="outComponent" required class="w-full" placeholder="Search Component..."></select>
                 </div>
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium">Quantity</label>
-                        <input type="number" id="outQty" required min="1" class="mt-1 w-full border rounded-lg p-3">
+                        <label class="block text-sm font-medium mb-1">Quantity</label>
+                        <input type="number" id="outQty" required min="1" class="w-full border rounded-lg p-2.5 border-gray-300">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium">Purpose</label>
-                        <input type="text" id="outPurpose" required class="mt-1 w-full border rounded-lg p-3" placeholder="e.g. Practical 1">
+                        <label class="block text-sm font-medium mb-1">Purpose</label>
+                        <input type="text" id="outPurpose" required class="w-full border rounded-lg p-2.5 border-gray-300" placeholder="e.g. Practical 1">
                     </div>
                 </div>
-                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg mt-4">Confirm OUT</button>
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg mt-4 transition duration-200">Confirm OUT</button>
             </form>
         </div>
 
@@ -58,18 +62,18 @@
         <div id="formIn" class="hidden bg-white p-6 rounded-xl shadow-sm border border-gray-200 max-w-2xl">
             <form id="returnForm" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium">Select Active Issue</label>
-                    <select id="inTransaction" required class="mt-1 w-full border rounded-lg p-3"></select>
+                    <label class="block text-sm font-medium mb-1">Select Active Issue (Type to search)</label>
+                    <select id="inTransaction" required class="w-full" placeholder="Search Issue..."></select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium">Condition</label>
-                    <select id="inCondition" class="mt-1 w-full border rounded-lg p-3">
+                    <label class="block text-sm font-medium mb-1">Condition</label>
+                    <select id="inCondition" class="w-full border rounded-lg p-2.5 border-gray-300">
                         <option value="Good">Good (Add to stock)</option>
                         <option value="Damaged">Damaged (Do not add to stock)</option>
                         <option value="Missing">Missing</option>
                     </select>
                 </div>
-                <button type="submit" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg mt-4">Confirm IN</button>
+                <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg mt-4 transition duration-200">Confirm IN</button>
             </form>
         </div>
     </main>

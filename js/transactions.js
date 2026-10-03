@@ -14,6 +14,9 @@ const inTransaction = document.getElementById("inTransaction");
 let componentsData = [];
 let currentUser = null;
 
+// Searchable Dropdown Instances
+let tsStudent, tsComponent, tsTransaction;
+
 onAuthStateChanged(auth, (user) => {
     if (!user) window.location.href = "index.html";
     else {
@@ -36,6 +39,11 @@ tabIn.addEventListener("click", () => {
 
 async function loadDropdowns() {
     try {
+        // Clear previous TomSelect instances if reloading data
+        if(tsStudent) { tsStudent.destroy(); }
+        if(tsComponent) { tsComponent.destroy(); }
+        if(tsTransaction) { tsTransaction.destroy(); }
+
         // Load Students
         const stuSnap = await getDocs(collection(db, "students"));
         outStudent.innerHTML = `<option value="">-- Select Student --</option>`;
@@ -65,6 +73,11 @@ async function loadDropdowns() {
             inTransaction.innerHTML += `<option value="${doc.id}">${tx.studentName} - ${tx.componentName} (Qty: ${tx.quantity})</option>`;
         });
 
+        // Initialize TomSelect for Searchable Dropdowns
+        tsStudent = new TomSelect("#outStudent", { maxOptions: 1000, create: false });
+        tsComponent = new TomSelect("#outComponent", { maxOptions: 1000, create: false });
+        tsTransaction = new TomSelect("#inTransaction", { maxOptions: 1000, create: false });
+
     } catch (e) { console.error("Error loading dropdowns", e); }
 }
 
@@ -78,11 +91,19 @@ document.getElementById("issueForm").addEventListener("submit", async (e) => {
     const qty = Number(document.getElementById("outQty").value);
     const purpose = document.getElementById("outPurpose").value;
     
+    if(!stuId || !compId) {
+        alert("Please select Student and Component");
+        btn.innerText = "Confirm OUT";
+        return;
+    }
+
     const comp = componentsData.find(c => c.id === compId);
-    const stuName = outStudent.options[outStudent.selectedIndex].text.split(" (")[0];
+    // Fetch the correct name from the select text
+    const studentText = outStudent.options[outStudent.selectedIndex].text;
+    const stuName = studentText.split(" (")[0];
 
     if (qty > comp.availableQty) {
-        alert("Not enough stock!");
+        alert("Not enough stock available!");
         btn.innerText = "Confirm OUT";
         return;
     }
@@ -112,7 +133,12 @@ document.getElementById("issueForm").addEventListener("submit", async (e) => {
 
         await batch.commit();
         alert("Successfully Issued!");
-        e.target.reset();
+        
+        // Reset form completely including TomSelect UI
+        document.getElementById("issueForm").reset();
+        tsStudent.clear();
+        tsComponent.clear();
+        
         loadDropdowns(); // refresh data
     } catch (err) {
         alert("Error issuing component");
@@ -128,10 +154,15 @@ document.getElementById("returnForm").addEventListener("submit", async (e) => {
 
     const txId = inTransaction.value;
     const condition = document.getElementById("inCondition").value;
+    
+    if(!txId) {
+        alert("Please select an issue to return.");
+        btn.innerText = "Confirm IN";
+        return;
+    }
 
     try {
-        // Fetch the original OUT transaction
-        const txDoc = await getDocs(query(collection(db, "transactions"))); // simplified for vanilla JS without complex imports
+        const txDoc = await getDocs(query(collection(db, "transactions"))); 
         let originalTx = null;
         txDoc.forEach(d => { if(d.id === txId) originalTx = d.data(); });
 
@@ -166,7 +197,10 @@ document.getElementById("returnForm").addEventListener("submit", async (e) => {
 
         await batch.commit();
         alert("Successfully Returned!");
-        e.target.reset();
+        
+        document.getElementById("returnForm").reset();
+        tsTransaction.clear();
+        
         loadDropdowns();
     } catch (err) {
         alert("Error returning component");
