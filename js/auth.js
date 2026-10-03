@@ -1,5 +1,5 @@
 import { auth } from "./firebase-init.js";
-import { signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { signInWithEmailAndPassword, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const loginForm = document.getElementById("loginForm");
 const emailInput = document.getElementById("email");
@@ -32,3 +32,24 @@ loginForm.addEventListener("submit", async (e) => {
         loginBtn.disabled = false;
     }
 });
+
+
+// Forgot Password Logic
+const forgotPwdBtn = document.getElementById("forgotPwdBtn");
+if (forgotPwdBtn) {
+    forgotPwdBtn.addEventListener("click", async () => {
+        const email = emailInput.value.trim();
+        if (!email) {
+            alert("Please enter your email address in the email field first, then click 'Forgot Password'.");
+            return;
+        }
+        
+        try {
+            await sendPasswordResetEmail(auth, email);
+            alert("If this email exists, a password reset link has been sent. Please check your inbox.");
+        } catch (error) {
+            console.error("Error sending reset email:", error);
+            alert("Failed to send reset email. Ensure the email is correct.");
+        }
+    });
+}
