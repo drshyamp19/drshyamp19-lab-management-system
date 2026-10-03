@@ -11,110 +11,68 @@
     <aside class="hidden md:flex flex-col w-64 bg-white border-r border-gray-200">
         <div class="p-4 border-b">
             <h2 class="text-xl font-bold text-gray-800">Lab System</h2>
-            <p class="text-sm text-gray-500" id="userRoleDisplay">Loading...</p>
         </div>
         <nav class="flex-1 p-4 space-y-2">
             <a href="dashboard.html" class="block px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50">Dashboard</a>
             <a href="components.html" class="block px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50">Components</a>
             <a href="students.html" class="block px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50">Students</a>
             <a href="transactions.html" class="block px-4 py-2 rounded-lg bg-blue-50 text-blue-700 font-medium">IN/OUT</a>
-            <a href="labs.html" id="navLabs" class="hidden block px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50">Labs</a>
+            <a href="reports.html" class="block px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50">Reports</a>
         </nav>
-        <div class="p-4 border-t">
-            <button id="logoutBtn" class="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg font-medium">Logout</button>
-        </div>
     </aside>
 
-    <main class="flex-1 p-4 md:p-8 overflow-y-auto pb-24 md:pb-8">
-        <header class="mb-4">
-            <h1 class="text-2xl font-bold">IN / OUT Transactions</h1>
-            <p class="text-gray-500 text-sm">Components issue करा किंवा return घ्या.</p>
-        </header>
+    <main class="flex-1 p-4 md:p-8 overflow-y-auto">
+        <h1 class="text-2xl font-bold text-gray-900 mb-6">IN / OUT Transactions</h1>
 
-        <div id="labPickerWrap" class="hidden mb-4">
-            <label class="block text-sm font-medium text-gray-700">Lab</label>
-            <select id="labPicker" class="mt-1 w-full md:w-64 px-3 py-2 border border-gray-300 rounded-lg"></select>
+        <div class="flex space-x-4 mb-6 border-b border-gray-200 pb-2">
+            <button id="tabOut" class="font-bold text-blue-600 border-b-2 border-blue-600 px-2 py-1">OUT (Issue)</button>
+            <button id="tabIn" class="font-bold text-gray-500 hover:text-gray-700 px-2 py-1">IN (Return)</button>
         </div>
 
-        <div class="flex gap-2 mb-4">
-            <button id="tabOutBtn" class="px-4 py-2 rounded-lg font-medium bg-blue-600 text-white">OUT (Issue)</button>
-            <button id="tabInBtn" class="px-4 py-2 rounded-lg font-medium bg-white border border-gray-300 text-gray-700">IN (Return)</button>
-        </div>
-
-        <!-- OUT PANEL -->
-        <div id="outPanel" class="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-3 mb-6">
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Search Student (Name / UID / Roll No)</label>
-                <input id="outStudentSearch" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg">
-                <div id="outStudentResults" class="border rounded-lg mt-1 hidden bg-white shadow max-h-40 overflow-y-auto"></div>
-                <p id="outStudentSelected" class="text-sm text-green-700 mt-1 hidden"></p>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Search Component (Name / Code)</label>
-                <input id="outCompSearch" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg">
-                <div id="outCompResults" class="border rounded-lg mt-1 hidden bg-white shadow max-h-40 overflow-y-auto"></div>
-                <p id="outCompSelected" class="text-sm text-green-700 mt-1 hidden"></p>
-            </div>
-            <div class="grid md:grid-cols-2 gap-3">
+        <!-- OUT FORM -->
+        <div id="formOut" class="bg-white p-6 rounded-xl shadow-sm border border-gray-200 max-w-2xl">
+            <form id="issueForm" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Quantity</label>
-                    <input type="number" min="1" id="outQty" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    <label class="block text-sm font-medium">Select Student</label>
+                    <select id="outStudent" required class="mt-1 w-full border rounded-lg p-3"></select>
                 </div>
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Purpose / Practical</label>
-                    <input id="outPurpose" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    <label class="block text-sm font-medium">Select Component</label>
+                    <select id="outComponent" required class="mt-1 w-full border rounded-lg p-3"></select>
                 </div>
-            </div>
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Remarks (optional)</label>
-                <input id="outRemarks" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg">
-            </div>
-            <p id="outError" class="text-red-500 text-sm hidden"></p>
-            <p id="outSuccess" class="text-green-600 text-sm hidden"></p>
-            <button id="submitOutBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg w-full md:w-auto">Confirm OUT</button>
-        </div>
-
-        <!-- IN PANEL -->
-        <div id="inPanel" class="hidden bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-3">
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Search by Student Name/UID or Component Name/Code</label>
-                <input id="inSearch" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="Type to find issued items...">
-            </div>
-            <div id="inResults" class="space-y-2"></div>
-
-            <div id="inFormWrap" class="hidden border-t pt-3 space-y-3">
-                <p class="text-sm font-medium" id="inSelectedInfo"></p>
-                <div class="grid md:grid-cols-2 gap-3">
+                <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Return Quantity</label>
-                        <input type="number" min="1" id="inQty" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg">
+                        <label class="block text-sm font-medium">Quantity</label>
+                        <input type="number" id="outQty" required min="1" class="mt-1 w-full border rounded-lg p-3">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Condition</label>
-                        <select id="inCondition" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg">
-                            <option value="good">Good</option>
-                            <option value="damaged">Damaged</option>
-                            <option value="missing">Missing</option>
-                        </select>
+                        <label class="block text-sm font-medium">Purpose</label>
+                        <input type="text" id="outPurpose" required class="mt-1 w-full border rounded-lg p-3" placeholder="e.g. Practical 1">
                     </div>
                 </div>
+                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg mt-4">Confirm OUT</button>
+            </form>
+        </div>
+
+        <!-- IN FORM -->
+        <div id="formIn" class="hidden bg-white p-6 rounded-xl shadow-sm border border-gray-200 max-w-2xl">
+            <form id="returnForm" class="space-y-4">
                 <div>
-                    <label class="block text-sm font-medium text-gray-700">Remarks (optional)</label>
-                    <input id="inRemarks" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg">
+                    <label class="block text-sm font-medium">Select Active Issue</label>
+                    <select id="inTransaction" required class="mt-1 w-full border rounded-lg p-3"></select>
                 </div>
-                <p id="inError" class="text-red-500 text-sm hidden"></p>
-                <p id="inSuccess" class="text-green-600 text-sm hidden"></p>
-                <button id="submitInBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg w-full md:w-auto">Confirm IN</button>
-            </div>
+                <div>
+                    <label class="block text-sm font-medium">Condition</label>
+                    <select id="inCondition" class="mt-1 w-full border rounded-lg p-3">
+                        <option value="Good">Good (Add to stock)</option>
+                        <option value="Damaged">Damaged (Do not add to stock)</option>
+                        <option value="Missing">Missing</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full bg-green-600 text-white font-bold py-3 rounded-lg mt-4">Confirm IN</button>
+            </form>
         </div>
     </main>
-
-    <nav class="md:hidden fixed bottom-0 w-full bg-white border-t border-gray-200 flex justify-around items-center h-16 z-50">
-        <a href="dashboard.html" class="flex flex-col items-center text-gray-500 text-xs">Home</a>
-        <a href="components.html" class="flex flex-col items-center text-gray-500 text-xs">Stock</a>
-        <a href="transactions.html" class="flex flex-col items-center text-blue-600 text-xs">IN/OUT</a>
-        <a href="students.html" class="flex flex-col items-center text-gray-500 text-xs">Students</a>
-    </nav>
 
     <script type="module" src="js/transactions.js"></script>
 </body>

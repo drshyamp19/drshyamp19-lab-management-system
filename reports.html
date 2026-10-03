@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports - Lab System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS for Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+</head>
+<body class="bg-gray-50 flex h-screen overflow-hidden text-gray-900">
+
+    <aside class="hidden md:flex flex-col w-64 bg-white border-r border-gray-200">
+        <div class="p-4 border-b">
+            <h2 class="text-xl font-bold text-gray-800">Lab System</h2>
+        </div>
+        <nav class="flex-1 p-4 space-y-2">
+            <a href="dashboard.html" class="block px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50">Dashboard</a>
+            <a href="components.html" class="block px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50">Components</a>
+            <a href="students.html" class="block px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50">Students</a>
+            <a href="transactions.html" class="block px-4 py-2 rounded-lg text-gray-600 hover:bg-gray-50">IN/OUT</a>
+            <a href="reports.html" class="block px-4 py-2 rounded-lg bg-blue-50 text-blue-700 font-medium">Reports</a>
+        </nav>
+    </aside>
+
+    <main class="flex-1 p-4 md:p-8 overflow-y-auto">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-900">System Reports</h1>
+            <button id="exportExcelBtn" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                Download Excel
+            </button>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <table class="w-full text-left border-collapse" id="reportsTable">
+                <thead>
+                    <tr class="bg-gray-50 border-b border-gray-200">
+                        <th class="p-4 text-sm font-semibold text-gray-600">Type</th>
+                        <th class="p-4 text-sm font-semibold text-gray-600">Component</th>
+                        <th class="p-4 text-sm font-semibold text-gray-600">Student</th>
+                        <th class="p-4 text-sm font-semibold text-gray-600">Qty</th>
+                        <th class="p-4 text-sm font-semibold text-gray-600">Status</th>
+                    </tr>
+                </thead>
+                <tbody id="reportsBody">
+                    <tr><td colspan="5" class="p-4 text-center text-gray-500">Loading reports...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </main>
+
+    <script type="module" src="js/reports.js"></script>
+</body>
+</html>
