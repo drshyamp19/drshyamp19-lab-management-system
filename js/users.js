@@ -64,14 +64,20 @@ async function loadUsers() {
             if(u.role === 'ADMIN') {
                 actionHtml = `<span class="text-xs text-gray-400">Master</span>`;
             } else if (u.status === 'Inactive') {
-                actionHtml = `<span class="text-xs font-bold text-red-600">Deleted (Blocked)</span>`;
+                actionHtml = `
+                    <div class="flex flex-col gap-1 items-end">
+                        <span class="text-xs font-bold text-red-600">Blocked</span>
+                        <button onclick="reactivateUser('${docSnap.id}')" class="bg-green-500 hover:bg-green-600 text-white px-2 py-1 rounded text-[10px] font-bold">Unblock</button>
+                    </div>
+                `;
             } else {
-                actionHtml = `<button onclick="deleteUser('${docSnap.id}')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs font-bold">Delete</button>`;
+                actionHtml = `<button onclick="deleteUser('${docSnap.id}')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs font-bold">Block</button>`;
             }
 
             row.innerHTML = `
                 <td class="p-4 font-medium text-gray-900">${u.name}</td>
                 <td class="p-4 text-gray-600">${u.email}</td>
+                <td class="p-4 text-xs font-mono text-gray-800 bg-gray-50 rounded">${u.savedPassword || 'N/A'}</td>
                 <td class="p-4"><span class="px-2 py-1 rounded text-xs font-bold ${roleBadge}">${u.role}</span></td>
                 <td class="p-4 text-xs text-gray-500 uppercase">${perms}</td>
                 <td class="p-4 text-right">${actionHtml}</td>
@@ -85,13 +91,26 @@ async function loadUsers() {
 
 // Make delete function globally available to HTML onclick
 window.deleteUser = async function(uid) {
-    if(confirm("Are you sure you want to delete this user? They will be blocked from logging in.")) {
+    if(confirm("Are you sure you want to block this user? They will not be able to log in.")) {
         try {
             await updateDoc(doc(db, "users", uid), { status: "Inactive" });
-            alert("User deleted/blocked successfully.");
+            alert("User blocked successfully.");
             loadUsers();
         } catch(e) {
-            alert("Error deleting user.");
+            alert("Error blocking user.");
+            console.error(e);
+        }
+    }
+};
+
+window.reactivateUser = async function(uid) {
+    if(confirm("Are you sure you want to UNBLOCK this user? They will be able to log in again.")) {
+        try {
+            await updateDoc(doc(db, "users", uid), { status: "Active" });
+            alert("User reactivated successfully.");
+            loadUsers();
+        } catch(e) {
+            alert("Error reactivating user.");
             console.error(e);
         }
     }
@@ -121,6 +140,7 @@ addUserForm.addEventListener("submit", async (e) => {
             name: name,
             email: email,
             role: role,
+            savedPassword: password, // Special option to view password
             permissions: selectedPermissions,
             status: "Active",
             createdAt: new Date()
