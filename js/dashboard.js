@@ -26,6 +26,10 @@ onAuthStateChanged(auth, async (user) => {
 
             userNameDisplay.innerText = userData.name;
             userRoleDisplay.innerText = userData.role;
+
+            // Load Dashboard Stats
+            loadDashboardStats();
+
         } else {
             userNameDisplay.innerText = user.email;
         }
@@ -33,6 +37,28 @@ onAuthStateChanged(auth, async (user) => {
         console.error("Error fetching user data:", error);
     }
 });
+
+async function loadDashboardStats() {
+    try {
+        const { collection, getDocs, query, where } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+        
+        // Count Components
+        const compSnap = await getDocs(collection(db, "components"));
+        let totalCompCount = 0;
+        compSnap.forEach(doc => { totalCompCount += doc.data().totalQty || 0; });
+        document.getElementById("statTotal").innerText = totalCompCount;
+
+        // Count Issued
+        const txQuery = query(collection(db, "transactions"), where("status", "==", "Issued"));
+        const txSnap = await getDocs(txQuery);
+        let issuedCount = 0;
+        txSnap.forEach(doc => { issuedCount += doc.data().quantity || 0; });
+        document.getElementById("statIssued").innerText = issuedCount;
+
+    } catch (error) {
+        console.error("Error loading stats:", error);
+    }
+}
 
 logoutBtn?.addEventListener("click", () => {
     signOut(auth).then(() => {
