@@ -163,7 +163,18 @@ document.getElementById("issueForm").addEventListener("submit", async (e) => {
         batch.update(compRef, { availableQty: comp.availableQty - qty });
 
         await batch.commit();
-        alert("Successfully Issued!");
+        
+        // WhatsApp Alert
+        const stuDoc = await getDoc(doc(db, "students", stuId));
+        if (stuDoc.exists() && stuDoc.data().phone) {
+            const phone = stuDoc.data().phone;
+            const msg = `Hello ${stuName},\n\nYou have been issued the following item from the Lab:\n- Item: ${comp.name}\n- Quantity: ${qty}\n- Purpose: ${purpose}\n\nPlease handle it with care and return it on time.\n\n- Lab Admin`;
+            if(confirm("Successfully Issued!\n\nDo you want to send a WhatsApp alert to the student?")) {
+                window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+            }
+        } else {
+            alert("Successfully Issued!");
+        }
         
         // Reset form completely including TomSelect UI
         document.getElementById("issueForm").reset();
@@ -264,7 +275,18 @@ document.getElementById("returnForm").addEventListener("submit", async (e) => {
         }
 
         await batch.commit();
-        alert("Successfully Returned!");
+        
+        // WhatsApp Alert for Return
+        const stuDoc = await getDoc(doc(db, "students", originalTx.studentId || originalTx.studentUid));
+        if (stuDoc && stuDoc.exists() && stuDoc.data().phone) {
+            const phone = stuDoc.data().phone;
+            const msg = `Hello ${originalTx.studentName},\n\nWe have received your returned item:\n- Item: ${comp ? comp.name : originalTx.componentName}\n- Quantity Returned: ${totalReturned}\n- Condition: (Good: ${goodQty}, Damaged: ${damagedQty}, Missing: ${missingQty})\n\nThank you!\n- Lab Admin`;
+            if(confirm("Successfully Returned!\n\nDo you want to send a WhatsApp return receipt?")) {
+                window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+            }
+        } else {
+            alert("Successfully Returned!");
+        }
         
         document.getElementById("returnForm").reset();
         tsTransaction.clear();

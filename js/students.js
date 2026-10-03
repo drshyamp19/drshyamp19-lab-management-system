@@ -338,6 +338,7 @@ addStudentForm.addEventListener("submit", async (e) => {
             uid: uid,
             name: document.getElementById("stuName").value,
             course: document.getElementById("stuCourse").value,
+            phone: document.getElementById("stuPhone")?.value || "",
             createdAt: new Date()
         });
         

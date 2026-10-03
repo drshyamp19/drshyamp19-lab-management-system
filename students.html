@@ -89,6 +89,10 @@
                     <label class="block text-sm font-medium">Course</label>
                     <input type="text" id="stuCourse" required class="mt-1 w-full border rounded-lg p-2">
                 </div>
+                <div>
+                    <label class="block text-sm font-medium">Mobile Number (10 digits)</label>
+                    <input type="tel" id="stuPhone" pattern="[0-9]{10}" class="mt-1 w-full border rounded-lg p-2" placeholder="e.g. 9876543210">
+                </div>
                 <div class="flex justify-end space-x-3 mt-6">
                     <button type="button" id="closeModalBtn" class="px-4 py-2 text-gray-600">Cancel</button>
                     <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg">Save</button>
