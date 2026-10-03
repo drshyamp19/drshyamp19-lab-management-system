@@ -1,5 +1,5 @@
 import { db, auth } from "./firebase-init.js";
-import { collection, getDocs, doc, updateDoc, writeBatch, serverTimestamp, query, where } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { collection, getDocs, doc, updateDoc, writeBatch, serverTimestamp, query, where, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const tabOut = document.getElementById("tabOut");
@@ -17,10 +17,21 @@ let currentUser = null;
 // Searchable Dropdown Instances
 let tsStudent, tsComponent, tsTransaction;
 
-onAuthStateChanged(auth, (user) => {
-    if (!user) window.location.href = "index.html";
-    else {
+let staffName = "Unknown Staff";
+
+onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+        window.location.href = "index.html";
+    } else {
         currentUser = user;
+        try {
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            if (userDoc.exists()) {
+                staffName = userDoc.data().name + " (" + userDoc.data().role + ")";
+            }
+        } catch (e) {
+            console.error("Error fetching staff name:", e);
+        }
         loadDropdowns();
     }
 });
@@ -126,7 +137,8 @@ document.getElementById("issueForm").addEventListener("submit", async (e) => {
             purpose: purpose,
             dateTime: serverTimestamp(),
             status: comp.category === "NON_CONSUMABLE" ? "Issued" : "Consumed",
-            issuedBy: currentUser.uid
+            issuedBy: currentUser.uid,
+            handledBy: staffName
         });
 
         // 2. Decrease Stock
@@ -173,7 +185,10 @@ document.getElementById("returnForm").addEventListener("submit", async (e) => {
         const batch = writeBatch(db);
 
         // 1. Mark original as Returned
-        batch.update(doc(db, "transactions", txId), { status: "Returned" });
+        batch.update(doc(db, "transactions", txId), { 
+            status: "Returned",
+            handledBy: staffName
+        });
 
         // 2. Create IN transaction
         const newTxRef = doc(collection(db, "transactions"));
@@ -184,7 +199,8 @@ document.getElementById("returnForm").addEventListener("submit", async (e) => {
             quantity: originalTx.quantity,
             condition: condition,
             dateTime: serverTimestamp(),
-            receivedBy: currentUser.uid
+            receivedBy: currentUser.uid,
+            handledBy: staffName
         });
 
         // 3. Increase Stock (ONLY if Good condition)

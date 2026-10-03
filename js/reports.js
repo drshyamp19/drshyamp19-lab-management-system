@@ -19,7 +19,7 @@ async function loadReports() {
         allTransactions = [];
         
         if (querySnapshot.empty) {
-            reportsBody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-gray-500">No transactions yet.</td></tr>`;
+            reportsBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">No transactions yet.</td></tr>`;
             return;
         }
 
@@ -37,12 +37,13 @@ async function loadReports() {
                 <td class="p-4 text-gray-600">${tx.studentName}</td>
                 <td class="p-4 font-bold text-gray-900">${tx.quantity}</td>
                 <td class="p-4 text-sm text-gray-500">${tx.type === 'OUT' ? tx.status : tx.condition}</td>
+                <td class="p-4 text-sm text-gray-500">${tx.handledBy || 'N/A'}</td>
             `;
             reportsBody.appendChild(row);
         });
     } catch (error) {
         console.error("Error loading reports:", error);
-        reportsBody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-red-500">Error loading data</td></tr>`;
+        reportsBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Error loading data</td></tr>`;
     }
 }
 
@@ -56,6 +57,7 @@ exportExcelBtn.addEventListener("click", () => {
         "Student": tx.studentName,
         "Quantity": tx.quantity,
         "Status / Condition": tx.type === 'OUT' ? tx.status : tx.condition,
+        "Handled By (Staff)": tx.handledBy || 'N/A',
         "Date": tx.dateTime ? tx.dateTime.toDate().toLocaleString() : ""
     }));
 

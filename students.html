@@ -97,6 +97,24 @@
         </div>
     </div>
 
+    <!-- Return Modal (For Student) -->
+    <div id="returnCompModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl max-w-md w-full p-6">
+            <h2 class="text-xl font-bold mb-4">Return from: <span id="returnStudentName" class="text-green-600"></span></h2>
+            <form id="returnCompForm" class="space-y-4">
+                <input type="hidden" id="returnStudentUid">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Select Active Transaction</label>
+                    <select id="returnTxSelect" required class="w-full border rounded-lg p-2.5"></select>
+                </div>
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button type="button" id="closeReturnModalBtn" class="px-4 py-2 text-gray-600">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-green-600 text-white rounded-lg">Confirm Return</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Direct Issue Modal (For Student) -->
     <div id="issueCompModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-xl max-w-md w-full p-6">

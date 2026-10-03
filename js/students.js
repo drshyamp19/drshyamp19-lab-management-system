@@ -1,5 +1,5 @@
 import { db, auth } from "./firebase-init.js";
-import { collection, getDocs, setDoc, doc, writeBatch, serverTimestamp, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { collection, getDocs, setDoc, doc, writeBatch, serverTimestamp, getDoc, query, where, increment, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const studentsTableBody = document.getElementById("studentsTableBody");
@@ -22,10 +22,22 @@ const issueCompSelect = document.getElementById("issueCompSelect");
 let allStudents = [];
 let allComponentsCache = [];
 let tomSelectInstance = null;
+let staffName = "Unknown Staff";
 
-onAuthStateChanged(auth, (user) => {
-    if (!user) window.location.href = "index.html";
-    else loadStudents();
+onAuthStateChanged(auth, async (user) => {
+    if (!user) {
+        window.location.href = "index.html";
+    } else {
+        try {
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            if (userDoc.exists()) {
+                staffName = userDoc.data().name + " (" + userDoc.data().role + ")";
+            }
+        } catch (e) {
+            console.error("Error fetching staff name:", e);
+        }
+        loadStudents();
+    }
 });
 
 async function loadStudents() {
@@ -57,7 +69,8 @@ function renderStudents(list) {
             <td class="p-4 text-gray-600">${st.name}</td>
             <td class="p-4 text-gray-600">${st.course}</td>
             <td class="p-4 text-right">
-                <button onclick="openIssueModal('${st.uid}', '${st.name.replace(/'/g, "\\'")}')" class="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-1 rounded-md text-xs font-bold transition">Issue Item</button>
+                <button onclick="openIssueModal('${st.uid}', '${st.name.replace(/'/g, "\\'")}')" class="bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white px-3 py-1 rounded-md text-xs font-bold transition mr-1">Issue Item</button>
+                <button onclick="openReturnModal('${st.uid}', '${st.name.replace(/'/g, "\\'")}')" class="bg-green-50 text-green-600 hover:bg-green-600 hover:text-white px-3 py-1 rounded-md text-xs font-bold transition">Return</button>
             </td>
         `;
         studentsTableBody.appendChild(tr);
@@ -140,6 +153,7 @@ directIssueForm.addEventListener("submit", async (e) => {
             quantity: qty,
             purpose: purpose,
             status: newStatus,
+            handledBy: staffName,
             date: serverTimestamp()
         });
 
@@ -157,6 +171,87 @@ directIssueForm.addEventListener("submit", async (e) => {
         alert("Failed to issue component.");
     } finally {
         btn.innerText = "Confirm Issue";
+        btn.disabled = false;
+    }
+});
+
+// Return Modal Elements
+const returnCompModal = document.getElementById("returnCompModal");
+const closeReturnModalBtn = document.getElementById("closeReturnModalBtn");
+const returnCompForm = document.getElementById("returnCompForm");
+const returnTxSelect = document.getElementById("returnTxSelect");
+
+window.openReturnModal = async function(studentUid, studentName) {
+    document.getElementById("returnStudentUid").value = studentUid;
+    document.getElementById("returnStudentName").innerText = studentName;
+    
+    returnTxSelect.innerHTML = `<option value="">Loading transactions...</option>`;
+    returnCompModal.classList.remove("hidden");
+
+    try {
+        const q = query(collection(db, "transactions"), where("studentUid", "==", studentUid), where("status", "==", "Issued"));
+        const snapshot = await getDocs(q);
+        
+        if (snapshot.empty) {
+            returnTxSelect.innerHTML = `<option value="">No active issues for this student.</option>`;
+        } else {
+            returnTxSelect.innerHTML = `<option value="">Select Transaction to Return...</option>`;
+            snapshot.forEach(doc => {
+                const tx = doc.data();
+                returnTxSelect.innerHTML += `<option value="${doc.id}|${tx.componentId}|${tx.quantity}">${tx.componentName} (Qty: ${tx.quantity}) - ${new Date(tx.date?.toDate()).toLocaleDateString()}</option>`;
+            });
+        }
+    } catch(e) {
+        console.error("Error loading transactions:", e);
+        returnTxSelect.innerHTML = `<option value="">Error loading transactions</option>`;
+    }
+};
+
+closeReturnModalBtn.addEventListener("click", () => {
+    returnCompModal.classList.add("hidden");
+    returnCompForm.reset();
+});
+
+returnCompForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const studentUid = document.getElementById("returnStudentUid").value;
+    const txVal = returnTxSelect.value;
+    
+    if(!txVal) return alert("Please select a valid transaction to return.");
+
+    const [txId, compId, txQty] = txVal.split("|");
+    const qty = Number(txQty);
+    
+    const btn = returnCompForm.querySelector("button[type=submit]");
+    btn.innerText = "Processing...";
+    btn.disabled = true;
+
+    try {
+        const batch = writeBatch(db);
+        
+        // 1. Update Transaction
+        const txRef = doc(db, "transactions", txId);
+        batch.update(txRef, {
+            status: "Returned",
+            handledBy: staffName,
+            returnDate: serverTimestamp()
+        });
+
+        // 2. Update Component Stock
+        const compRef = doc(db, "components", compId);
+        batch.update(compRef, {
+            availableQty: increment(qty)
+        });
+
+        await batch.commit();
+        alert("Component returned successfully!");
+        returnCompModal.classList.add("hidden");
+        returnCompForm.reset();
+    } catch (error) {
+        console.error("Error returning:", error);
+        alert("Failed to return component.");
+    } finally {
+        btn.innerText = "Confirm Return";
         btn.disabled = false;
     }
 });
