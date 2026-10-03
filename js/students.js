@@ -212,6 +212,31 @@ closeReturnModalBtn.addEventListener("click", () => {
     returnCompForm.reset();
 });
 
+returnTxSelect.addEventListener("change", (e) => {
+    const val = e.target.value;
+    if(!val) {
+        document.getElementById("inIssuedQty").value = "";
+        document.getElementById("returnGoodQty").value = 0;
+        document.getElementById("returnDamagedQty").value = 0;
+        document.getElementById("returnMissingQty").value = 0;
+        return;
+    }
+    const qty = val.split("|")[2]; // value is doc.id|compId|qty
+    document.getElementById("inIssuedQty").value = qty;
+    document.getElementById("returnGoodQty").value = qty;
+    document.getElementById("returnDamagedQty").value = 0;
+    document.getElementById("returnMissingQty").value = 0;
+});
+
+document.getElementById("btnAllGood")?.addEventListener("click", () => {
+    const issuedQty = Number(document.getElementById("inIssuedQty").value);
+    if(issuedQty) {
+        document.getElementById("returnGoodQty").value = issuedQty;
+        document.getElementById("returnDamagedQty").value = 0;
+        document.getElementById("returnMissingQty").value = 0;
+    }
+});
+
 returnCompForm.addEventListener("submit", async (e) => {
     e.preventDefault();
     const studentUid = document.getElementById("returnStudentUid").value;
@@ -220,7 +245,16 @@ returnCompForm.addEventListener("submit", async (e) => {
     if(!txVal) return alert("Please select a valid transaction to return.");
 
     const [txId, compId, txQty] = txVal.split("|");
-    const qty = Number(txQty);
+    const issuedQty = Number(txQty);
+    
+    const goodQty = Number(document.getElementById("returnGoodQty").value) || 0;
+    const damagedQty = Number(document.getElementById("returnDamagedQty").value) || 0;
+    const missingQty = Number(document.getElementById("returnMissingQty").value) || 0;
+    
+    if (goodQty + damagedQty + missingQty !== issuedQty) {
+        alert(`Total return quantity (${goodQty + damagedQty + missingQty}) must equal issued quantity (${issuedQty}).`);
+        return;
+    }
     
     const btn = returnCompForm.querySelector("button[type=submit]");
     btn.innerText = "Processing...";
@@ -234,13 +268,15 @@ returnCompForm.addEventListener("submit", async (e) => {
         batch.update(txRef, {
             status: "Returned",
             handledBy: staffName,
-            returnDate: serverTimestamp()
+            returnDate: serverTimestamp(),
+            returnDetails: { good: goodQty, damaged: damagedQty, missing: missingQty }
         });
 
         // 2. Update Component Stock
         const compRef = doc(db, "components", compId);
         batch.update(compRef, {
-            availableQty: increment(qty)
+            availableQty: increment(goodQty),
+            totalQty: increment(-(damagedQty + missingQty))
         });
 
         await batch.commit();

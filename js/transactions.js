@@ -82,14 +82,31 @@ async function loadDropdowns() {
         txSnap.forEach(doc => {
             const tx = doc.data();
             if(tx.status === "Issued") {
-                inTransaction.innerHTML += `<option value="${doc.id}">${tx.studentName} - ${tx.componentName} (Qty: ${tx.quantity})</option>`;
+                inTransaction.innerHTML += `<option value="${doc.id}|${tx.quantity}">${tx.studentName} - ${tx.componentName} (Qty: ${tx.quantity})</option>`;
             }
         });
 
         // Initialize TomSelect for Searchable Dropdowns
         tsStudent = new TomSelect("#outStudent", { maxOptions: 1000, create: false });
         tsComponent = new TomSelect("#outComponent", { maxOptions: 1000, create: false });
-        tsTransaction = new TomSelect("#inTransaction", { maxOptions: 1000, create: false });
+        tsTransaction = new TomSelect("#inTransaction", { 
+            maxOptions: 1000, 
+            create: false,
+            onChange: function(value) {
+                if(!value) {
+                    document.getElementById("inIssuedQty").value = "";
+                    document.getElementById("returnGoodQty").value = 0;
+                    document.getElementById("returnDamagedQty").value = 0;
+                    document.getElementById("returnMissingQty").value = 0;
+                    return;
+                }
+                const qty = value.split("|")[1];
+                document.getElementById("inIssuedQty").value = qty;
+                document.getElementById("returnGoodQty").value = qty;
+                document.getElementById("returnDamagedQty").value = 0;
+                document.getElementById("returnMissingQty").value = 0;
+            }
+        });
 
     } catch (e) { console.error("Error loading dropdowns", e); }
 }
@@ -161,56 +178,62 @@ document.getElementById("issueForm").addEventListener("submit", async (e) => {
     btn.innerText = "Confirm OUT";
 });
 
+document.getElementById("btnAllGood")?.addEventListener("click", () => {
+    const issuedQty = Number(document.getElementById("inIssuedQty").value);
+    if(issuedQty) {
+        document.getElementById("returnGoodQty").value = issuedQty;
+        document.getElementById("returnDamagedQty").value = 0;
+        document.getElementById("returnMissingQty").value = 0;
+    }
+});
+
 document.getElementById("returnForm").addEventListener("submit", async (e) => {
     e.preventDefault();
     const btn = e.target.querySelector("button");
     btn.innerText = "Processing...";
 
-    const txId = inTransaction.value;
-    const condition = document.getElementById("inCondition").value;
+    const txVal = inTransaction.value;
     
-    if(!txId) {
+    if(!txVal) {
         alert("Please select an issue to return.");
         btn.innerText = "Confirm IN";
         return;
     }
 
-    try {
-        const txDoc = await getDocs(query(collection(db, "transactions"))); 
-        let originalTx = null;
-        txDoc.forEach(d => { if(d.id === txId) originalTx = d.data(); });
+    const txId = txVal.split("|")[0];
+    const issuedQty = Number(txVal.split("|")[1]);
+    
+    const goodQty = Number(document.getElementById("returnGoodQty").value) || 0;
+    const damagedQty = Number(document.getElementById("returnDamagedQty").value) || 0;
+    const missingQty = Number(document.getElementById("returnMissingQty").value) || 0;
+    
+    if (goodQty + damagedQty + missingQty !== issuedQty) {
+        alert(`Total return quantity (${goodQty + damagedQty + missingQty}) must equal issued quantity (${issuedQty}).`);
+        btn.innerText = "Confirm IN";
+        return;
+    }
 
-        if(!originalTx) throw new Error("Transaction not found");
+    try {
+        const txDoc = await getDoc(doc(db, "transactions", txId)); 
+        if(!txDoc.exists()) throw new Error("Transaction not found");
+        const originalTx = txDoc.data();
 
         const batch = writeBatch(db);
 
-        // 1. Mark original as Returned
+        // 1. Mark original as Returned and store details
         batch.update(doc(db, "transactions", txId), { 
             status: "Returned",
-            handledBy: staffName
+            handledBy: staffName,
+            returnDetails: { good: goodQty, damaged: damagedQty, missing: missingQty }
         });
 
-        // 2. Create IN transaction
-        const newTxRef = doc(collection(db, "transactions"));
-        batch.set(newTxRef, {
-            type: "IN",
-            studentName: originalTx.studentName,
-            componentName: originalTx.componentName,
-            quantity: originalTx.quantity,
-            condition: condition,
-            dateTime: serverTimestamp(),
-            receivedBy: currentUser.uid,
-            handledBy: staffName
-        });
-
-        // 3. Increase Stock (ONLY if Good condition)
-        if (condition === "Good") {
-            const comp = componentsData.find(c => c.id === originalTx.componentId);
-            if (comp) {
-                batch.update(doc(db, "components", originalTx.componentId), { 
-                    availableQty: comp.availableQty + originalTx.quantity 
-                });
-            }
+        // 2. Update Component Stock
+        const comp = componentsData.find(c => c.id === originalTx.componentId);
+        if (comp) {
+            batch.update(doc(db, "components", originalTx.componentId), { 
+                availableQty: comp.availableQty + goodQty,
+                totalQty: comp.totalQty - (damagedQty + missingQty)
+            });
         }
 
         await batch.commit();

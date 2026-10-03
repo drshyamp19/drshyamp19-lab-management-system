@@ -23,6 +23,16 @@ async function loadReports() {
             return;
         }
 
+        const formatStatus = (tx) => {
+            if (tx.type === 'OUT') {
+                if (tx.status === 'Returned' && tx.returnDetails) {
+                    return `Returned (Good: ${tx.returnDetails.good}, Damaged: ${tx.returnDetails.damaged}, Missing: ${tx.returnDetails.missing})`;
+                }
+                return tx.status;
+            }
+            return tx.condition || '';
+        };
+
         querySnapshot.forEach((doc) => {
             const tx = doc.data();
             allTransactions.push(tx);
@@ -36,7 +46,7 @@ async function loadReports() {
                 <td class="p-4 font-medium text-gray-900">${tx.componentName}</td>
                 <td class="p-4 text-gray-600">${tx.studentName}</td>
                 <td class="p-4 font-bold text-gray-900">${tx.quantity}</td>
-                <td class="p-4 text-sm text-gray-500">${tx.type === 'OUT' ? tx.status : tx.condition}</td>
+                <td class="p-4 text-sm text-gray-500">${formatStatus(tx)}</td>
                 <td class="p-4 text-sm text-gray-500">${tx.handledBy || 'N/A'}</td>
             `;
             reportsBody.appendChild(row);
@@ -50,13 +60,23 @@ async function loadReports() {
 exportExcelBtn.addEventListener("click", () => {
     if (allTransactions.length === 0) return alert("No data to export!");
 
+    const formatStatus = (tx) => {
+        if (tx.type === 'OUT') {
+            if (tx.status === 'Returned' && tx.returnDetails) {
+                return `Returned (Good: ${tx.returnDetails.good}, Damaged: ${tx.returnDetails.damaged}, Missing: ${tx.returnDetails.missing})`;
+            }
+            return tx.status;
+        }
+        return tx.condition || '';
+    };
+
     // Clean data for Excel
     const excelData = allTransactions.map(tx => ({
         "Type": tx.type,
         "Component": tx.componentName,
         "Student": tx.studentName,
         "Quantity": tx.quantity,
-        "Status / Condition": tx.type === 'OUT' ? tx.status : tx.condition,
+        "Status / Condition": formatStatus(tx),
         "Handled By (Staff)": tx.handledBy || 'N/A',
         "Date": tx.dateTime ? tx.dateTime.toDate().toLocaleString() : ""
     }));
