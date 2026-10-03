@@ -7,6 +7,17 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- SheetJS for Excel -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <style>
+        @media print {
+            aside, nav, button { display: none !important; }
+            main { padding: 0 !important; margin: 0 !important; overflow: visible !important; }
+            .bg-gray-50 { background-color: white !important; }
+            .shadow-sm { box-shadow: none !important; }
+            .border { border: 1px solid #ddd !important; }
+            h1 { text-align: center; margin-bottom: 20px; }
+            body { height: auto !important; overflow: visible !important; }
+        }
+    </style>
 </head>
 <body class="bg-gray-50 flex h-screen overflow-hidden text-gray-900">
 
@@ -26,9 +37,14 @@
     <main class="flex-1 p-4 md:p-8 overflow-y-auto">
         <div class="flex justify-between items-center mb-6">
             <h1 class="text-2xl font-bold text-gray-900">System Reports</h1>
-            <button id="exportExcelBtn" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
-                Download Excel
-            </button>
+            <div class="flex space-x-2">
+                <button onclick="window.print()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                    Print Report
+                </button>
+                <button id="exportExcelBtn" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
+                    Download Excel
+                </button>
+            </div>
         </div>
 
         <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">

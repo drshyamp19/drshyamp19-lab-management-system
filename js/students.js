@@ -189,7 +189,7 @@ window.openReturnModal = async function(studentUid, studentName) {
     returnCompModal.classList.remove("hidden");
 
     try {
-        const q = query(collection(db, "transactions"), where("studentUid", "==", studentUid), where("status", "==", "Issued"));
+        const q = query(collection(db, "transactions"), where("studentUid", "==", studentUid), where("status", "in", ["Issued", "Consumed"]));
         const snapshot = await getDocs(q);
         
         if (snapshot.empty) {
@@ -423,7 +423,11 @@ window.openStudentHistory = async function(uid, name) {
         
         let txs = [];
         snapshot.forEach(doc => txs.push({id: doc.id, ...doc.data()}));
-        txs.sort((a, b) => b.date?.toMillis() - a.date?.toMillis());
+        txs.sort((a, b) => {
+            const timeA = a.date ? a.date.toMillis() : (a.dateTime ? a.dateTime.toMillis() : 0);
+            const timeB = b.date ? b.date.toMillis() : (b.dateTime ? b.dateTime.toMillis() : 0);
+            return timeB - timeA;
+        });
         
         if(txs.length === 0) {
             studentHistoryTableBody.innerHTML = `<tr><td colspan="4" class="p-3 text-center text-gray-500">No history found.</td></tr>`;

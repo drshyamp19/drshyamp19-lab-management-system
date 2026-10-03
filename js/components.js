@@ -214,7 +214,7 @@ window.openReturnModal = async function(compId, compName) {
     returnCompModal.classList.remove("hidden");
 
     try {
-        const q = query(collection(db, "transactions"), where("componentId", "==", compId), where("status", "==", "Issued"));
+        const q = query(collection(db, "transactions"), where("componentId", "==", compId), where("status", "in", ["Issued", "Consumed"]));
         const snapshot = await getDocs(q);
         
         if (snapshot.empty) {
@@ -452,7 +452,11 @@ window.openCompHistory = async function(compId, compName) {
         
         let txs = [];
         snapshot.forEach(doc => txs.push({id: doc.id, ...doc.data()}));
-        txs.sort((a, b) => b.date?.toMillis() - a.date?.toMillis());
+        txs.sort((a, b) => {
+            const timeA = a.date ? a.date.toMillis() : (a.dateTime ? a.dateTime.toMillis() : 0);
+            const timeB = b.date ? b.date.toMillis() : (b.dateTime ? b.dateTime.toMillis() : 0);
+            return timeB - timeA;
+        });
         
         if(txs.length === 0) {
             compHistoryTableBody.innerHTML = `<tr><td colspan="4" class="p-3 text-center text-gray-500">No history found.</td></tr>`;

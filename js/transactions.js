@@ -81,7 +81,7 @@ async function loadDropdowns() {
         inTransaction.innerHTML = `<option value="">-- Select Issue to Return --</option>`;
         txSnap.forEach(doc => {
             const tx = doc.data();
-            if(tx.status === "Issued") {
+            if(tx.status === "Issued" || tx.status === "Consumed") {
                 inTransaction.innerHTML += `<option value="${doc.id}|${tx.quantity}">${tx.studentName} - ${tx.componentName} (Qty: ${tx.quantity})</option>`;
             }
         });
@@ -235,6 +235,7 @@ document.getElementById("returnForm").addEventListener("submit", async (e) => {
             batch.update(doc(db, "transactions", txId), { 
                 status: "Returned",
                 handledBy: staffName,
+                returnDate: serverTimestamp(),
                 returnDetails: { good: goodQty, damaged: damagedQty, missing: missingQty }
             });
         } else {
@@ -248,6 +249,7 @@ document.getElementById("returnForm").addEventListener("submit", async (e) => {
                 quantity: totalReturned,
                 status: "Returned",
                 handledBy: staffName,
+                returnDate: serverTimestamp(),
                 returnDetails: { good: goodQty, damaged: damagedQty, missing: missingQty }
             });
         }

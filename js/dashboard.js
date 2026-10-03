@@ -49,7 +49,7 @@ async function loadDashboardStats() {
         document.getElementById("statTotal").innerText = totalCompCount;
 
         // Count Issued
-        const txQuery = query(collection(db, "transactions"), where("status", "==", "Issued"));
+        const txQuery = query(collection(db, "transactions"), where("status", "in", ["Issued", "Consumed"]));
         const txSnap = await getDocs(txQuery);
         let issuedCount = 0;
         txSnap.forEach(doc => { issuedCount += doc.data().quantity || 0; });
